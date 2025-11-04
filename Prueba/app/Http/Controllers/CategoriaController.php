@@ -10,14 +10,7 @@ class CategoriaController extends Controller
     private function requireLogin()
     {
         if (!Session::has('autorizacion_usuario') || !Session::get('autorizacion_usuario')) {
-            abort(403, 'Acceso no autorizado. Debe iniciar sesión.');
-        }
-
-        $usuarioData = json_decode(Session::get('usuario'));
-
-        // VERIFICACIÓN DE ROL: (Requerimiento 5 y 6)
-        if (!isset($usuarioData->rol) || $usuarioData->rol !== \App\Enums\RolUser::ADMIN) {
-            abort(403, 'Acceso denegado. Se requiere rol de Administrador.');
+            abort(403);
         }
     }
 

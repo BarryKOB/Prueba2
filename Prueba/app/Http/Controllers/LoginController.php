@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Enums\RolUser;
+use App\Enums\RolUsuario;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
+use App\Models\Usuario;
 
 class LoginController extends Controller
 {
@@ -31,23 +33,23 @@ class LoginController extends Controller
         $datosSesion = [
             'email' => $usuario->email,
             'nombre'  => $usuario->nombre,
-            'rol' => $usuario->rol, // ROL AÑADIDO
-            'fecha_ingreso' => now()->toDateTimeString(),
+            'fecha_ingreso' => now()->toString(),
         ];
 
-        // Guardar usuario en sesión (Requerimiento 2.c)
+        // Guardar usuario en sesión
         Session::put('usuario', json_encode($datosSesion));
         Session::put('autorizacion_usuario', true);
         Session::regenerate();
 
         // Si el usuario marcó "Recordarme"
         if ($request->has('recuerdame')) {
-            config(['session.lifetime' => 43200]); 
+            // Aumentar manualmente la duración de la cookie de sesión
+            config(['session.lifetime' => 43200]); // 30 días
+            // Evitar que la sesión se elimine al cerrar el navegador
             config(['expire_on_close' => true]);
         }
 
-        // Redirección basada en Rol
-        if ($usuario->rol === \App\Enums\RolUser::ADMIN) { 
+        if ($usuario->rol === RolUser::ADMIN) {
             return redirect()->route('dashboard');
         } else {
             return redirect()->route('principal');
@@ -56,11 +58,8 @@ class LoginController extends Controller
 
     public function cerrarSesion()
     {
-        // CORRECCIÓN CRÍTICA PARA R4.c: Solo borramos las credenciales, NO el carrito.
-        Session::forget('usuario');
-        Session::forget('autorizacion_usuario');
-        
-        Session::regenerate(); 
+        Session::forget(['autorizacion_usuario','usuario']);
+        Session::regenerate();       // regenerar ID de sesión por seguridad
 
         return redirect()->route('login')->with('mensaje', 'Sesión cerrada correctamente.');
     }

@@ -16,23 +16,16 @@
         <input type="text" name="destacado" placeholder="destacado" required>
 
 
-        {{-- Sección de Categorías (CORRECCIÓN) --}}
-        <h3>Categorías</h3>
-        <p>Selecciona una o más categorías:</p>
-        
+    <h3>Ingredientes</h3>
         <div id="categorias">
-            {{-- NOTA: Este bucle debe iterar sobre las categorías pasadas por el MuebleController::create --}}
-            @php $categorias = session('categorias', []); @endphp 
-            @foreach ($categorias as $id => $cat)
-                <div>
-                    <input type="checkbox" name="categoria_id[]" value="{{ $cat['id'] }}" id="cat_{{ $cat['id'] }}">
-                    <label for="cat_{{ $cat['id'] }}">{{ $cat['nombre'] }}</label>
-                </div>
-            @endforeach
+            <div>
+                <input type="text" name="categorias[0][nombre]" placeholder="Nombre" required>
+                <input type="text" name="categorias[0][descripcion]" placeholder="Descripción">
+            </div>
         </div>
 
-        {{-- Se elimina la función agregarCategoria() --}}
-        <button class="btn-guardar" type="submit">Guardar mueble</button> 
+        <button class="btn-agregar" type="button" onclick="agregarCategoria()">+ Añadir categoria</button>
+        <button class="btn-guardar" type="submit">Guardar receta</button>
     </form>
     <br>
     <a href="{{ url()->previous() }}" class="btn-volver">

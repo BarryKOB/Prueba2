@@ -1,0 +1,86 @@
+@extends('cabecera') {{-- OK: Se extiende el layout --}}
+
+@section('contenido')
+    <h2 class="mb-4">Tu carrito</h2>
+
+    {{-- LECTURA DE LA MONEDA para mostrar el símbolo correcto (R1.b) --}}
+    @php
+        $monedaSimbolo = request()->cookie('preferencia_moneda', '€'); 
+    @endphp
+
+    {{-- Mostrar mensajes flash de éxito/error --}}
+    @if (session('success'))
+        <div class="alert alert-success">{{ session('success') }}</div>
+    @endif
+    @if (session('error'))
+        <div class="alert alert-danger">{{ session('error') }}</div>
+    @endif
+
+    @if (empty($carrito))
+        <div class="alert alert-info">No tienes muebles en el carrito.</div>
+    @else
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Producto</th>
+                    <th>Precio</th>
+                    <th>Cantidad</th>
+                    <th>Stock Disponible</th>
+                    <th>Subtotal</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach ($carrito as $id => $item)
+                    <tr>
+                        <td>{{ $item['nombre'] }}</td>
+                        <td>{{ number_format($item['precio'], 2) }} {{ $monedaSimbolo }}</td>
+                        
+                        {{-- Columna de Cantidad con Formulario de Actualizar (R4.a) --}}
+                        <td>
+                            <form method="POST" action="{{ route('carrito.update', ['muebleId' => $id]) }}" class="d-flex align-items-center">
+                                @csrf
+                                <input type="number" name="cantidad" value="{{ $item['cantidad'] }}" min="1" max="{{ $item['stock_disponible'] ?? 99 }}" class="form-control me-2" style="width: 80px;" required>
+                                <button class="btn btn-sm btn-info" type="submit">Actualizar</button>
+                            </form>
+                        </td>
+                        
+                        <td>{{ $item['stock_disponible'] ?? 'N/A' }}</td>
+                        
+                        <td>{{ number_format($item['precio'] * $item['cantidad'], 2) }} {{ $monedaSimbolo }}</td>
+                        
+                        {{-- Botón Eliminar (Requerimiento 4.a) --}}
+                        <td>
+                            <form method="POST" action="{{ route('carrito.remove', ['muebleId' => $id]) }}">
+                                @csrf
+                                <button class="btn btn-sm btn-danger" type="submit">Eliminar</button>
+                            </form>
+                        </td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+
+        {{-- Totales (Requerimiento 4.b) --}}
+        <div class="row justify-content-end">
+            <div class="col-md-4">
+                <div class="totales-carrito">
+                    {{-- Los totales vienen calculados del CarritoController --}}
+                    <h4>Subtotal: {{ number_format($subtotal, 2) }} {{ $monedaSimbolo }}</h4>
+                    <h4>Impuestos (16% simulado): {{ number_format($impuestos, 2) }} {{ $monedaSimbolo }}</h4>
+                    <h4 class="mt-3">Total: {{ number_format($total, 2) }} {{ $monedaSimbolo }}</h4>
+                </div>
+            </div>
+        </div>
+        
+
+        <div class="mt-3 d-flex gap-2 justify-content-end">
+            {{-- Botón Vaciar Carrito (Requerimiento 4.a) --}}
+            <form method="POST" action="{{ route('carrito.clear') }}">
+                @csrf
+                <button class="btn btn-warning" type="submit" >Vaciar carrito</button>
+            </form>
+            <a href="{{ route('principal') }}" class="btn btn-success">Continuar Comprando</a>
+        </div>
+    @endif 
+@endsection

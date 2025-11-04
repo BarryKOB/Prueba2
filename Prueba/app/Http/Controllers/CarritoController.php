@@ -5,111 +5,103 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Cookie;
-use App\Models\User; // Asumimos que User está disponible
+use App\Models\Mueble; 
+use App\Models\User;
 
 class CarritoController extends Controller
 {
     // Claves de persistencia del carrito
-    const COOKIE_MINUTES = 60 * 24 * 30; // 30 días de persistencia
+    const COOKIE_MINUTES = 60 * 24 * 30;
     const ANONYMOUS_KEY = 'carrito_anonimo'; 
 
-    /**
-     * Determina el identificador único para el carrito (R4.c).
-     * Usa el email si está logueado, o la clave anónima si no lo está.
-     */
     private function getStorageIdentifier(): string
     {
         if (Session::has('usuario')) {
             $usuarioData = json_decode(Session::get('usuario'));
-            // Ligamos el carrito al email del usuario (privado)
+            // Ligamos el carrito al email del usuario (privado) - R4.c
             return 'carrito_user_' . md5($usuarioData->email); 
         }
-        // Clave anónima ligada al navegador (pública)
         return self::ANONYMOUS_KEY;
     }
 
-    /**
-     * Función auxiliar para obtener el carrito, priorizando la sesión, luego la cookie (R4.c).
-     */
     private function getCarritoFromStorage(Request $request): array
     {
         $key = $this->getStorageIdentifier();
+        if (Session::has($key)) { return Session::get($key, []); }
 
-        // 1. Prioridad 1: Leer de la SESIÓN (siempre más reciente)
-        if (Session::has($key)) {
-            return Session::get($key, []);
-        }
-
-        // 2. Prioridad 2: Leer de la COOKIE (Persistencia post-logout)
         $cookie_data = $request->cookie($key);
         if ($cookie_data) {
             $carrito = json_decode($cookie_data, true);
-            // Cargar la cookie a la sesión tan pronto como se lee
             Session::put($key, $carrito);
             return $carrito;
         }
-
         return [];
     }
 
-    /**
-     * Función auxiliar para guardar el carrito en la Sesión y en la Cookie (R4.c).
-     */
     private function saveCarritoToStorage(array $carrito)
     {
         $key = $this->getStorageIdentifier();
-
-        // Guardar en Sesión (para acceso rápido durante la navegación)
         Session::put($key, $carrito); 
-
-        // Guardar en Cookie (para Persistencia post-logout/cierre de navegador)
         Cookie::queue($key, json_encode($carrito), self::COOKIE_MINUTES);
-    }
-
-    /**
-     * Función auxiliar para obtener datos de un mueble (Mock Data).
-     */
-    public function getMuebleById(string $id): ?array
-    {
-        // NOTA: Estos datos MOCK deben coincidir con los que están en principal.blade.php
-        $mueblesMock = [
-            'MESA1' => ['id' => 'MESA1', 'nombre' => 'Mesa de Comedor Lusso', 'precio' => 250.00, 'stock' => 5],
-            'SOFA2' => ['id' => 'SOFA2', 'nombre' => 'Sofá Modular Confort', 'precio' => 850.00, 'stock' => 12],
-            'SILLA3' => ['id' => 'SILLA3', 'nombre' => 'Silla Eames Clásica', 'precio' => 75.00, 'stock' => 0],
-            'MUEBLE1' => ['id' => 'MUEBLE1', 'nombre' => 'Silla de Oficina', 'precio' => 85.50, 'stock' => 10, 'categoria_id' => 'CAT1'],
-        ];
-
-        return $mueblesMock[$id] ?? null;
-    }
-
-    public static function getMueblesMockData(): array 
-    {
-        return [
-            'MESA1' => ['id' => 'MESA1', 'nombre' => 'Mesa de Comedor Lusso', 'precio' => 250.00, 'stock' => 5],
-            'SOFA2' => ['id' => 'SOFA2', 'nombre' => 'Sofá Modular Confort', 'precio' => 850.00, 'stock' => 12],
-            'SILLA3' => ['id' => 'SILLA3', 'nombre' => 'Silla Eames Clásica', 'precio' => 75.00, 'stock' => 0],
-            // ... (resto de tu mock data) ...
-        ];
     }
     
     /**
-     * Muestra el contenido del carrito (Requerimiento 4.b).
+     * Función CRÍTICA: Actualiza el stock del mueble en su cookie individual.
      */
+    private function updateMuebleStockInCookie(string $id, int $newStock)
+    {
+        $cookieName = "mueble_{$id}";
+        $cookieData = json_decode(request()->cookie($cookieName), true); 
+        
+        // Si la cookie no existe (Admin nunca lo guardó), usamos el MockData completo como base
+        if (!is_array($cookieData)) {
+            $cookieData = Mueble::getAllMockData()[$id] ?? null;
+            if (!$cookieData) return;
+        }
+        
+        // Actualizamos el stock
+        $cookieData['stock'] = $newStock;
+        
+        // Guardamos la cookie completa con el stock actualizado
+        Cookie::queue($cookieName, json_encode($cookieData), self::COOKIE_MINUTES);
+    }
+    
+    /**
+     * Función auxiliar para obtener datos de un mueble (LEYENDO DE MOCK/COOKIE).
+     * Esta función garantiza que obtenemos el stock actualizado.
+     */
+    private function getMuebleById(string $id): ?array
+    {
+        // 1. OBTENER LISTA DE MUEBLES (Mocks base + Muebles creados por Admin)
+        $mueblesMock = Mueble::getAllMockData(); // Obtiene la lista base
+        $mueblesAdmin = Session::get('muebles', []); // Muebles creados por el CRUD de Admin
+        $mueblesCombined = array_merge($mueblesMock, $mueblesAdmin);
+        
+        $mueble = $mueblesCombined[$id] ?? null;
+
+        // 2. SOBREESCRIBIR STOCK CON EL VALOR PERSISTIDO EN COOKIE
+        if ($mueble) {
+            $cookieData = request()->cookie("mueble_{$id}");
+            if ($cookieData) {
+                $arr = json_decode($cookieData, true);
+                if (isset($arr['stock'])) {
+                    $mueble['stock'] = $arr['stock'];
+                }
+            }
+        }
+        return $mueble; // Devuelve el mueble con el stock real
+    }
+
     public function show(Request $request)
     {
         $carrito = $this->getCarritoFromStorage($request); 
-        
-        // CÁLCULOS (Requerimiento 4.b)
         $subtotal = array_sum(array_map(fn($item) => $item['precio'] * $item['cantidad'], $carrito));
         $impuestos = $subtotal * 0.16;
         $total = $subtotal + $impuestos;
 
-        return view('carrito.show', compact('carrito', 'subtotal', 'impuestos', 'total'));
+        return view('carrito.index', compact('carrito', 'subtotal', 'impuestos', 'total')); 
     }
 
-    /**
-     * Añade un mueble al carrito (Requerimiento 4.a).
-     */
     public function add(Request $request, string $muebleId)
     {
         $mueble = $this->getMuebleById($muebleId);
@@ -118,23 +110,24 @@ class CarritoController extends Controller
         $cantidadAAnadir = $request->input('cantidad', 1);
         $carrito = $this->getCarritoFromStorage($request); 
         $stockDisponible = $mueble['stock'];
-        $cantidadActual = $carrito[$muebleId]['cantidad'] ?? 0;
-        $nuevaCantidad = $cantidadActual + $cantidadAAnadir;
+        $cantidadActualEnCarrito = $carrito[$muebleId]['cantidad'] ?? 0;
+        $nuevaCantidadTotalEnCarrito = $cantidadActualEnCarrito + $cantidadAAnadir;
 
         // Validación de Stock (R4.d)
-        if ($nuevaCantidad > $stockDisponible) {
+        if ($nuevaCantidadTotalEnCarrito > $stockDisponible) {
             return back()->with('error', 'No hay suficiente stock. Stock disponible: ' . $stockDisponible);
         }
 
+        // DISMINUIR STOCK EN LA COOKIE DEL MUEBLE
+        $stockFinal = $stockDisponible - $cantidadAAnadir;
+        $this->updateMuebleStockInCookie($muebleId, $stockFinal);
+
         if (isset($carrito[$muebleId])) {
-            $carrito[$muebleId]['cantidad'] = $nuevaCantidad;
+            $carrito[$muebleId]['cantidad'] = $nuevaCantidadTotalEnCarrito;
         } else {
             $carrito[$muebleId] = [
-                'mueble_id' => $muebleId,
-                'nombre' => $mueble['nombre'],
-                'precio' => $mueble['precio'],
-                'cantidad' => $cantidadAAnadir,
-                'stock_disponible' => $stockDisponible,
+                'mueble_id' => $muebleId, 'nombre' => $mueble['nombre'], 'precio' => $mueble['precio'], 
+                'cantidad' => $cantidadAAnadir, 'stock_disponible' => $stockDisponible,
             ];
         }
 
@@ -142,22 +135,28 @@ class CarritoController extends Controller
         return redirect()->route('carrito.show')->with('success', $mueble['nombre'] . ' añadido al carrito.');
     }
 
-    /**
-     * Actualiza la cantidad de un ítem (Requerimiento 4.a).
-     */
     public function update(Request $request, string $muebleId)
     {
         $request->validate(['cantidad' => 'required|integer|min:1']);
-        $cantidad = $request->input('cantidad');
+        $cantidadNueva = $request->input('cantidad');
         $carrito = $this->getCarritoFromStorage($request); 
 
         if (isset($carrito[$muebleId])) {
             $stockDisponible = $carrito[$muebleId]['stock_disponible'];
-            if ($cantidad > $stockDisponible) {
+            $cantidadVieja = $carrito[$muebleId]['cantidad'];
+            
+            if ($cantidadNueva > $stockDisponible) {
                 return back()->with('error', 'No hay suficiente stock. Máximo: ' . $stockDisponible);
             }
+            
+            // AJUSTE DE STOCK
+            $diferenciaNeta = $cantidadNueva - $cantidadVieja; 
+            $stockMuebleActual = $this->getMuebleById($muebleId)['stock'];
+            $nuevoStockMueble = $stockMuebleActual - $diferenciaNeta;
 
-            $carrito[$muebleId]['cantidad'] = $cantidad;
+            $this->updateMuebleStockInCookie($muebleId, $nuevoStockMueble); 
+
+            $carrito[$muebleId]['cantidad'] = $cantidadNueva;
             $this->saveCarritoToStorage($carrito); 
             return back()->with('success', 'Cantidad actualizada.');
         }
@@ -165,14 +164,18 @@ class CarritoController extends Controller
         return back()->with('error', 'Mueble no encontrado en el carrito.');
     }
 
-    /**
-     * Elimina un ítem del carrito (Requerimiento 4.a).
-     */
     public function remove(string $muebleId, Request $request)
     {
         $carrito = $this->getCarritoFromStorage($request); 
 
         if (isset($carrito[$muebleId])) {
+            $cantidadDevuelta = $carrito[$muebleId]['cantidad'];
+            
+            // RESTAURAR STOCK
+            $stockMuebleActual = $this->getMuebleById($muebleId)['stock'];
+            $nuevoStockMueble = $stockMuebleActual + $cantidadDevuelta; 
+            $this->updateMuebleStockInCookie($muebleId, $nuevoStockMueble);
+
             unset($carrito[$muebleId]);
             $this->saveCarritoToStorage($carrito); 
             return back()->with('success', 'Mueble eliminado del carrito.');
@@ -181,16 +184,25 @@ class CarritoController extends Controller
         return back()->with('error', 'Mueble no encontrado.');
     }
 
-    /**
-     * Vacía todo el carrito (Requerimiento 4.a).
-     */
     public function clear(Request $request)
     {
+        $carrito = $this->getCarritoFromStorage($request); 
+
+        // RESTAURACIÓN DE STOCK PARA TODOS LOS ÍTEMS
+        foreach ($carrito as $muebleId => $item) {
+             $cantidadDevuelta = $item['cantidad'];
+             
+             $muebleActual = $this->getMuebleById($muebleId); 
+             if ($muebleActual) {
+                 $stockMuebleActual = $muebleActual['stock'];
+                 $nuevoStockMueble = $stockMuebleActual + $cantidadDevuelta;
+                 $this->updateMuebleStockInCookie($muebleId, $nuevoStockMueble);
+             }
+        }
+
         $key = $this->getStorageIdentifier();
 
-        // Limpiamos la Sesión
         Session::forget($key);
-        // Borramos la cookie 
         Cookie::queue(Cookie::forget($key)); 
         return back()->with('success', 'Carrito vaciado correctamente.');
     }
