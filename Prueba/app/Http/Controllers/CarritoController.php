@@ -14,9 +14,8 @@ class CarritoController extends Controller
     const ANONYMOUS_KEY = 'carrito_anonimo'; 
 
     /**
-     * Determina el identificador único para el carrito.
-     * Si hay un usuario logueado, usa su email (privado).
-     * Si no hay login, usa una clave anónima (pública para el navegador).
+     * Determina el identificador único para el carrito (R4.c).
+     * Usa el email si está logueado, o la clave anónima si no lo está.
      */
     private function getStorageIdentifier(): string
     {
@@ -25,7 +24,7 @@ class CarritoController extends Controller
             // Ligamos el carrito al email del usuario (privado)
             return 'carrito_user_' . md5($usuarioData->email); 
         }
-        // Clave anónima ligada a la sesión (pública)
+        // Clave anónima ligada al navegador (pública)
         return self::ANONYMOUS_KEY;
     }
 
@@ -41,7 +40,7 @@ class CarritoController extends Controller
             return Session::get($key, []);
         }
 
-        // 2. Prioridad 2: Leer de la COOKIE (Persistencia post-logout/cierre de navegador)
+        // 2. Prioridad 2: Leer de la COOKIE (Persistencia post-logout)
         $cookie_data = $request->cookie($key);
         if ($cookie_data) {
             $carrito = json_decode($cookie_data, true);
@@ -70,9 +69,9 @@ class CarritoController extends Controller
     /**
      * Función auxiliar para obtener datos de un mueble (Mock Data).
      */
-    private function getMuebleById(string $id): ?array
+    public function getMuebleById(string $id): ?array
     {
-        // ... (Tu Mock Data) ...
+        // NOTA: Estos datos MOCK deben coincidir con los que están en principal.blade.php
         $mueblesMock = [
             'MESA1' => ['id' => 'MESA1', 'nombre' => 'Mesa de Comedor Lusso', 'precio' => 250.00, 'stock' => 5],
             'SOFA2' => ['id' => 'SOFA2', 'nombre' => 'Sofá Modular Confort', 'precio' => 850.00, 'stock' => 12],
@@ -82,6 +81,16 @@ class CarritoController extends Controller
 
         return $mueblesMock[$id] ?? null;
     }
+
+    public static function getMueblesMockData(): array 
+    {
+        return [
+            'MESA1' => ['id' => 'MESA1', 'nombre' => 'Mesa de Comedor Lusso', 'precio' => 250.00, 'stock' => 5],
+            'SOFA2' => ['id' => 'SOFA2', 'nombre' => 'Sofá Modular Confort', 'precio' => 850.00, 'stock' => 12],
+            'SILLA3' => ['id' => 'SILLA3', 'nombre' => 'Silla Eames Clásica', 'precio' => 75.00, 'stock' => 0],
+            // ... (resto de tu mock data) ...
+        ];
+    }
     
     /**
      * Muestra el contenido del carrito (Requerimiento 4.b).
@@ -90,6 +99,7 @@ class CarritoController extends Controller
     {
         $carrito = $this->getCarritoFromStorage($request); 
         
+        // CÁLCULOS (Requerimiento 4.b)
         $subtotal = array_sum(array_map(fn($item) => $item['precio'] * $item['cantidad'], $carrito));
         $impuestos = $subtotal * 0.16;
         $total = $subtotal + $impuestos;
@@ -97,6 +107,9 @@ class CarritoController extends Controller
         return view('carrito.show', compact('carrito', 'subtotal', 'impuestos', 'total'));
     }
 
+    /**
+     * Añade un mueble al carrito (Requerimiento 4.a).
+     */
     public function add(Request $request, string $muebleId)
     {
         $mueble = $this->getMuebleById($muebleId);
@@ -129,6 +142,9 @@ class CarritoController extends Controller
         return redirect()->route('carrito.show')->with('success', $mueble['nombre'] . ' añadido al carrito.');
     }
 
+    /**
+     * Actualiza la cantidad de un ítem (Requerimiento 4.a).
+     */
     public function update(Request $request, string $muebleId)
     {
         $request->validate(['cantidad' => 'required|integer|min:1']);
@@ -149,6 +165,9 @@ class CarritoController extends Controller
         return back()->with('error', 'Mueble no encontrado en el carrito.');
     }
 
+    /**
+     * Elimina un ítem del carrito (Requerimiento 4.a).
+     */
     public function remove(string $muebleId, Request $request)
     {
         $carrito = $this->getCarritoFromStorage($request); 
@@ -162,6 +181,9 @@ class CarritoController extends Controller
         return back()->with('error', 'Mueble no encontrado.');
     }
 
+    /**
+     * Vacía todo el carrito (Requerimiento 4.a).
+     */
     public function clear(Request $request)
     {
         $key = $this->getStorageIdentifier();
