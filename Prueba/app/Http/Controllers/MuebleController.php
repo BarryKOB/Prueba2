@@ -30,14 +30,12 @@ class MuebleController extends Controller
         );
     }
 
-    // ... dentro de MuebleController.php ...
-
     private function requireLogin()
     {
         if (!Session::has('autorizacion_usuario') || !Session::get('autorizacion_usuario')) {
             abort(403, 'Acceso no autorizado. Debe iniciar sesión.');
         }
-        
+
         $usuarioData = json_decode(Session::get('usuario'));
 
         // VERIFICACIÓN DE ROL: (Requerimiento 5 y 6)
@@ -45,7 +43,6 @@ class MuebleController extends Controller
             abort(403, 'Acceso denegado. Se requiere rol de Administrador.');
         }
     }
-
 
     public function index()
     {

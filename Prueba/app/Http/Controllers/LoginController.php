@@ -22,7 +22,6 @@ class LoginController extends Controller
         ]);
 
         // Verificar usuario
-	// a
         $usuario = User::verificarUsuario($datos['email'], $datos['password']);
 
         if (!$usuario) {
@@ -55,14 +54,18 @@ class LoginController extends Controller
         }
     }
 
-    public function cerrarSesion()
-    {
-        // CORRECCIÓN CRÍTICA: Usamos forget para NO BORRAR EL CARRITO (R4.c)
-        Session::forget('usuario');
-        Session::forget('autorizacion_usuario');
-        
-        Session::regenerate(); // Regenerar ID por seguridad
+   // ... dentro de LoginController.php
 
-        return redirect()->route('login')->with('mensaje', 'Sesión cerrada correctamente.');
-    }
+   public function cerrarSesion()
+   {
+       // Corrección: Solo olvidamos las claves de autenticación (Requerimiento 2.d)
+       Session::forget('usuario');
+       Session::forget('autorizacion_usuario');
+       
+       // NO HACEMOS Session::flush()
+
+       Session::regenerate(); 
+
+       return redirect()->route('login')->with('mensaje', 'Sesión cerrada correctamente.');
+   }
 }

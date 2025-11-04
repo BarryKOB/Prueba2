@@ -7,7 +7,6 @@ use Illuminate\Support\Facades\Session;
 
 class CategoriaController extends Controller
 {
-    // FUNCIÓN DE VERIFICACIÓN DE ROL Y LOGIN (Requerimiento 5 y 6)
     private function requireLogin()
     {
         if (!Session::has('autorizacion_usuario') || !Session::get('autorizacion_usuario')) {
