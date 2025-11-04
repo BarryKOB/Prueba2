@@ -54,18 +54,14 @@ class LoginController extends Controller
         }
     }
 
-   // ... dentro de LoginController.php
+    public function cerrarSesion()
+    {
+        // CORRECCIÓN CRÍTICA PARA R4.c: Solo borramos las credenciales, NO el carrito.
+        Session::forget('usuario');
+        Session::forget('autorizacion_usuario');
+        
+        Session::regenerate(); 
 
-   public function cerrarSesion()
-   {
-       // Corrección: Solo olvidamos las claves de autenticación (Requerimiento 2.d)
-       Session::forget('usuario');
-       Session::forget('autorizacion_usuario');
-       
-       // NO HACEMOS Session::flush()
-
-       Session::regenerate(); 
-
-       return redirect()->route('login')->with('mensaje', 'Sesión cerrada correctamente.');
-   }
+        return redirect()->route('login')->with('mensaje', 'Sesión cerrada correctamente.');
+    }
 }
