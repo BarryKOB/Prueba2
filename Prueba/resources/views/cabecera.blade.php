@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Tienda de Muebles</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <style>
+        /* Estilos CSS aquí, si los tienes */
+        .totales-carrito { text-align: right; margin-top: 20px; }
+        .totales-carrito h4 { font-weight: bold; }
+    </style>
+    @stack('styles')
+</head>
+
+<body class="bg-light">
+    @php
+        // Lógica de sesión para la navegación
+        $sesionActiva = Session::has('autorizacion_usuario') && Session::get('autorizacion_usuario');
+        $usuario = $sesionActiva && Session::has('usuario') ? json_decode(Session::get('usuario')) : null;
+    @endphp
+
+    {{-- BARRA DE NAVEGACIÓN UNIFICADA --}}
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a href="{{ route('principal') }}" class="navbar-brand">🏠 Tienda de Muebles</a>
+            
+            {{-- Usuario y Enlaces a la derecha --}}
+            <div class="ms-auto d-flex align-items-center gap-3">
+                
+                @if ($usuario)
+                    <span class="navbar-text text-white-50">
+                        Usuario Activo: {{ $usuario->nombre }} 
+                    </span>
+                @else
+                    <span class="navbar-text text-white-50">
+                        Usuario Desconectado
+                    </span>
+                @endif
+                
+                {{-- Enlaces Fijos --}}
+                <a href="{{ route('carrito.show') }}" class="btn btn-outline-light">Ver Carrito</a>
+                
+                @if ($sesionActiva)
+                    <a href="{{ route('dashboard') }}" class="btn btn-outline-info">Panel de Administración</a>
+                    
+                    {{-- Formulario para Cerrar Sesión --}}
+                    <form action="{{ route('logout') }}" method="POST" class="d-flex"> 
+                        @csrf
+                        <button class="btn btn-outline-danger" type="submit">Cerrar Sesión</button>
+                    </form>
+                @else
+                    <a href="{{ route('login') }}" class="btn btn-outline-success">Iniciar Sesión</a>
+                @endif
+            </div>
+        </div>
+    </nav>
+    {{-- FIN BARRA DE NAVEGACIÓN --}}
+
+    <div class="container mt-4">
+        @if (session('success'))
+            <div class="alert alert-success">{{ session('success') }}</div>
+        @endif
+
+        @if ($errors->any())
+            <div class="alert alert-danger">{{ $errors->first() }}</div>
+        @endif
+
+        @yield('contenido')
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    @stack('scripts')
+</body>
+</html>
