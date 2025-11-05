@@ -73,23 +73,30 @@ class CarritoController extends Controller
     private function getMuebleById(string $id): ?array
     {
         // 1. OBTENER LISTA DE MUEBLES (Mocks base + Muebles creados por Admin)
-        $mueblesMock = Mueble::getAllMockData(); // Obtiene la lista base
-        $mueblesAdmin = Session::get('muebles', []); // Muebles creados por el CRUD de Admin
+        $mueblesMock = Mueble::getAllMockData(); // Lista base (arrays)
+        $mueblesAdmin = Session::get('muebles', []); // Muebles creados por el CRUD (Objetos Mueble)
         $mueblesCombined = array_merge($mueblesMock, $mueblesAdmin);
         
+        // CRÍTICO: Si el mueble es un objeto (viene de Admin CRUD), usamos toArray() para unificar
         $mueble = $mueblesCombined[$id] ?? null;
 
+        if ($mueble && $mueble instanceof Mueble) {
+            // Si el mueble es un objeto, lo convertimos temporalmente a array para el manejo de stock
+            $mueble = $mueble->jsonSerialize(); // Usamos jsonSerialize para obtener un array
+        }
+        
         // 2. SOBREESCRIBIR STOCK CON EL VALOR PERSISTIDO EN COOKIE
         if ($mueble) {
             $cookieData = request()->cookie("mueble_{$id}");
             if ($cookieData) {
                 $arr = json_decode($cookieData, true);
                 if (isset($arr['stock'])) {
-                    $mueble['stock'] = $arr['stock'];
+                    // LÍNEA 88 CORREGIDA: Accedemos al array asociativo $mueble
+                    $mueble['stock'] = $arr['stock']; 
                 }
             }
         }
-        return $mueble; // Devuelve el mueble con el stock real
+        return $mueble; // Devuelve el mueble como array (para usar en el add/update)
     }
 
     public function show(Request $request)

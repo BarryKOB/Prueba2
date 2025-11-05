@@ -12,7 +12,7 @@
             <thead>
                 <tr>
                     <th>Nombre</th>
-                    <th>Descripcion</th>
+                    <th>Precio</th>
                     <th>Acciones</th>
                 </tr>
             </thead>
@@ -20,7 +20,7 @@
                 @foreach ($muebles as $mueble)
                     <tr>
                         <td>{{ $mueble->getNombre() }}</td>
-                        <td>{{ $mueble->getDescripcion() ?? '-' }}</td>
+                        <td>{{ $mueble->getPrecio() ?? '-' }}</td>
                         <td>
                             <a href="{{ route('muebles.show', $mueble->getId()) }}">Ver</a> |
                             <a href="{{ route('muebles.edit', $mueble->getId()) }}">Editar</a> |

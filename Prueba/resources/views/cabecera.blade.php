@@ -37,9 +37,14 @@
                         <a href="{{ route('dashboard') }}" class="btn btn-outline-info">Panel de Administración</a>
                         <a href="{{ route('preferencias.edit') }}" class="btn btn-outline-secondary">⚙️ Preferencias</a>
                     @endif
+                    {{-- Comprobación de Rol (R5) --}}
+                    @if (isset($usuarioData->rol) && $usuarioData->rol === \App\Enums\RolUser::USUARIO->value)
+                        <a href="{{ route('carrito.show') }}" class="btn btn-outline-light">Ver Carrito</a>
+                        <a href="{{ route('preferencias.edit') }}" class="btn btn-outline-secondary">⚙️ Preferencias</a>
+                    @endif
                 @endif
-                
-                <a href="{{ route('carrito.show') }}" class="btn btn-outline-light">Ver Carrito</a>
+            
+    
                 
                 @if ($sesionActiva)
                     <form action="{{ route('logout') }}" method="POST" class="d-flex"> 

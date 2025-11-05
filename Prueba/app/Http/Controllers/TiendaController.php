@@ -17,22 +17,42 @@ class TiendaController extends Controller
         $page = $request->query('page', 1);
 
         // 2. CONSTRUCCIÓN DEL CATÁLOGO LEYENDO MOCKS Y DATOS DE ADMIN
-        // Obtenemos los Mocks ya actualizados con el stock de las cookies
-        $mueblesBase = Mueble::getAllMockData(); 
-        $mueblesAdmin = Session::get('muebles', []); // Muebles creados por el CRUD
-
-        // Combinamos: Si Admin crea MESA1, sobrescribe el mock MESA1.
+        $mueblesBase = Mueble::getAllMockData(); // Mocks base (Stock: 5)
+        $mueblesAdmin = Session::get('muebles', []);
         $mueblesTotal = array_merge($mueblesBase, $mueblesAdmin); 
-        
         $mueblesConStockActualizado = [];
 
+
         foreach ($mueblesTotal as $id => $mueble) {
-            // Construimos el objeto Mueble con el stock final
+            
+            // CONVERTIMOS EL OBJETO MUEBLE (si viene de la sesión) A ARRAY para trabajar con él
+            if ($mueble instanceof Mueble) {
+                // Si ya es un objeto Mueble, lo convertimos a array para el manejo de stock
+                $mueble = $mueble->jsonSerialize();
+            }
+            
+            $cookieName = "mueble_{$id}";
+            $cookieData = $request->cookie($cookieName); 
+            
+            // Si hay una cookie de stock actualizada, la lee (R4.d)
+            if ($cookieData) {
+                $arr = json_decode($cookieData, true);
+                
+                // CRÍTICO: Sobreescribir el stock del Mock/Session con el valor de la Cookie
+                if (isset($arr['stock'])) {
+                    // Si el elemento es una simple array, esto funciona:
+                    $mueble['stock'] = $arr['stock']; 
+                }
+            }
+            
+            // Construimos el objeto Mueble FINAL para la vista
             $mueblesConStockActualizado[$id] = new Mueble(
                 $mueble['id'] ?? $id, $mueble['nombre'] ?? '', $mueble['categoria_id'] ?? [], $mueble['descripcion'] ?? null,
-                $mueble['precio'] ?? 0, $mueble['stock'] ?? 0, 
+                $mueble['precio'] ?? 0,
+                $mueble['stock'] ?? 0,
                 $mueble['materiales'] ?? null, $mueble['dimensiones'] ?? null, $mueble['color_principal'] ?? null,
-                $mueble['destacado'] ?? false, []
+                $mueble['destacado'] ?? false,
+                $mueble['imagenes'] ?? []
             );
         }
 
@@ -55,11 +75,10 @@ class TiendaController extends Controller
         // Esta función lee el detalle del mueble, el stock se lee de la cookie.
         $val = $request->cookies->get("mueble_{$id}");
         
-        // Si no existe la cookie, intentamos usar el mock data base como fallback.
         if (!$val) {
              $mueble = Mueble::getAllMockData()[$id] ?? null;
              if (!$mueble) abort(404);
-             $arr = $mueble; // Usar el mock como array
+             $arr = $mueble; 
         } else {
              $arr = json_decode($val, true);
              if (!is_array($arr)) abort(404);

@@ -1,13 +1,9 @@
-<!doctype html>
-<html lang="es">
+@extends('cabecera')
 
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Panel de Administración</title>
-</head>
+@section('titulo', 'Detalle mueble')
 
-<body>
+@section('contenido')
+
     @if (Session::has('autorizacion_usuario'))
         <h1>Bienvenido, {{ $usuario->nombre }} </h1>
         <p>Email: {{ $usuario->email }}</p>
@@ -26,6 +22,4 @@
     @else
         <p>Debes iniciar sesión.</p>
     @endif
-</body>
-
-</html>
+@endsection

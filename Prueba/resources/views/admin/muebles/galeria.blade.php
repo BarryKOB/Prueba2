@@ -61,5 +61,5 @@
     @endif
 
     <br>
-    <a href="{{ url()->previous() }}" class="btn-volver">Volver</a>
+    <a href="{{ route('muebles.index') }}" class="btn-volver">Volver</a>
 @endsection

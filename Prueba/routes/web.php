@@ -11,7 +11,7 @@ use App\Http\Controllers\TiendaController;
 use App\Http\Controllers\CarritoController;
 
 
-Route::get('/', fn() => redirect()->route('dashboard'));
+Route::get('/', fn() => redirect()->route('login'));
 
 Route::get('/login', [LoginController::class, 'mostrar'])->name('login');
 Route::post('/login', [LoginController::class, 'login'])->name('login.post');
@@ -36,7 +36,6 @@ Route::delete('/muebles/{id}/galeria/{imagen}', [MuebleController::class, 'galle
 
 Route::get('/preferencias', [PreferenciasController::class, 'edit'])->name('preferencias.edit');
 Route::post('/preferencias', [PreferenciasController::class, 'update'])->name('preferencias.update');
-
 
 Route::get('/catalogo-muebles', [TiendaController::class, 'index'])->name('catalogomuebles.index');
 Route::get('/catalogo-muebles/{id}', [TiendaController::class, 'show'])->name('catalogomuebles.show');

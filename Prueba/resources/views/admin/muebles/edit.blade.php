@@ -14,7 +14,11 @@
     <input type="text" name="materiales" value="{{ $mueble->getMateriales() }}" required>
     <input type="text" name="dimensiones" value="{{ $mueble->getDimensiones() }}" required>
     <input type="text" name="color_principal" value="{{ $mueble->getColorPrincipal() }}" required>
-    <input type="text" name="destacado" value="{{ $mueble->getDestacado() }}" required>
+    <label>
+        <input type="checkbox" name="destacado" value="1" 
+            @checked(old('destacado', $mueble->getDestacado()))>
+        Destacado
+    </label>
     <button class="btn-guardar" type="submit">Actualizar</button>
 </form>
 
